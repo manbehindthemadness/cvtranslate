@@ -16,8 +16,8 @@ parser.add_argument('-ema', '--exponential_moving_average', action="store_true",
 parser.add_argument('-tt', '--time_to_ticks', action="store_true", help='Process timestamps in ticks or human readable', default=False)
 parser.add_argument('-f', '--fix-dates', action="store_true", help='resample the dates in the model file', default=True)
 parser.add_argument('-t', '--trim_days', action="store_true",
-                    help='as our sample data is a full/raw set they\'re are some anomalies early on, this will trim N days to refine the output',
-                    default=5)
+                    help='as our sample data is a full/raw set there are some anomalies early on, this will trim N days to refine the output',
+                    default=0)
 
 
 args = parser.parse_args()
