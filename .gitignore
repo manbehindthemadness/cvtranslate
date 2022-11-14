@@ -131,4 +131,4 @@ dmypy.json
 /models/*/alerts/*
 /models/*/feeds/*
 /models/*/meta/*
-/models/*.py
+/models/*/*.py
