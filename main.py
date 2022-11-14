@@ -102,7 +102,7 @@ def translate_fields(fields: [dict, list]) -> tuple:
     except (ValueError, TypeError):
         pass
     result = {
-        'timestamp': timestamp,
+        'date': timestamp,
         'open': _o,
         'high': _h,
         'low': _l,
@@ -194,7 +194,7 @@ for idx, m_file in enumerate(model_files):
         output_file = Path(output_name)
         if not output_file.is_file():
             output_file.touch()
-        fieldnames = ['timestamp', 'open', 'high', 'low', 'close', 'volume', 'diversity']
+        fieldnames = ['date', 'open', 'high', 'low', 'close', 'volume', 'diversity']
         with open(output_file, 'w', newline='') as csv_file:
             writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
             writer.writeheader()
@@ -223,7 +223,7 @@ for idx, m_file in enumerate(model_files):
             writer.writeheader()
             for quote, normalized_quote in zip(frame_data, normalized_quotes):
                 q, _ = translate_fields(quote)
-                t = q['timestamp']
+                t = q['date']
                 v = q['volume']
                 d = q['diversity']
                 o, h, l, c = normalized_quote
