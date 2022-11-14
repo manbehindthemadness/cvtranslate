@@ -11,10 +11,13 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-b', '--baseline', action="store_true", help='Baseline normalization average', default=1)
+parser.add_argument('-b', '--baseline', action="store_true", help='baseline normalization average', default=1)
 parser.add_argument('-ema', '--exponential_moving_average', action="store_true", help='exponential moving average', default=20)
 parser.add_argument('-tt', '--time_to_ticks', action="store_true", help='Process timestamps in ticks or human readable', default=False)
 parser.add_argument('-f', '--fix-dates', action="store_true", help='resample the dates in the model file', default=True)
+parser.add_argument('-t', '--trim_days', action="store_true",
+                    help='as our sample data is a full/raw set they\'re are some anomalies early on, this will trim N days to refine the output',
+                    default=5)
 
 
 args = parser.parse_args()
@@ -25,8 +28,9 @@ AL = args.exponential_moving_average
 BL = args.baseline
 TT = args.time_to_ticks
 F = args.fix_dates
+T = args.trim_days
 
-for arg in [AL, BL]:
+for arg in [AL, BL, T]:
     if not isinstance(arg, int):
         raise TypeError
 for arg in [TT, F]:
@@ -143,6 +147,21 @@ def normalize_quotes(_quotes: list, average_length: int, average_base: int):
     return result
 
 
+def trim_data(data: dict) -> dict:
+    """
+    This will trim N number of days from the beginning of the dataset.
+    """
+    _timeframes = list()
+    for tf in timeframes:
+        _timeframes.append(data[tf])
+    multipliers = [96, 16, 4, 2, 1]
+    for ix, (multiplier, _tf) in enumerate(zip(multipliers, _timeframes)):
+        _timeframes[ix] = _tf[multiplier * T:]
+    for tf, _tf in zip(timeframes, _timeframes):
+        data[tf] = _tf
+    return data
+
+
 def fix_timestamps(data: dict) -> dict:
     """
     This will ensure that any missing timestamps are filled in.
@@ -161,7 +180,9 @@ def fix_timestamps(data: dict) -> dict:
         _timeframes.append(data[tf])
     base, m30, h1, h4, d1 = _timeframes
     for ix, sample in enumerate(base):
-        st = sample['stamp']
+        st = sample['stamp'].split('-')
+        yr, mn, dy, hr, mi = st
+        st = f'{yr}-{mn}-{dy} {hr}:{mi}:00'
         if ix % 2:
             m30[_no_z(ix, 2)]['stamp'] = st
         if ix % 4:
@@ -185,6 +206,8 @@ for idx, m_file in enumerate(model_files):
 
 for idx, m_file in enumerate(model_files):
     raw_data = open_file(m_file.as_posix(), as_list=True)[0]  # noqa
+    if T:
+        raw_data = trim_data(raw_data)
     if F:
         raw_data = fix_timestamps(raw_data)
     for timeframe in timeframes:
