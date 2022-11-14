@@ -182,7 +182,6 @@ for idx, m_file in enumerate(model_files):
     output_name = str(prefix.as_posix())
     output_files.append(output_name)
     model_files[idx] = Path('models') / prefix / target
-pass  # debug hook
 
 for idx, m_file in enumerate(model_files):
     raw_data = open_file(m_file.as_posix(), as_list=True)[0]  # noqa
@@ -206,16 +205,14 @@ for idx, m_file in enumerate(model_files):
                     quotes.append(quote)
                 except ValueError as err:
                     print(row, '\n', err)
-                    pass
             csv_file.close()
         output_name = f'output/{output_files[idx]}_{timeframe}_PROCESSED{ext}'
         output_file = Path(output_name)
         normalized_quotes = normalize_quotes(
             quotes,
             AL,
-            BL,  # len(quotes)
+            BL,
         )
-
         if not output_file.is_file():
             output_file.touch()
         with open(output_file, 'w', newline='') as csv_file:
@@ -233,5 +230,4 @@ for idx, m_file in enumerate(model_files):
                     writer.writerow(row)
                 except ValueError as err:
                     print(row, '\n', err)
-                    pass
             csv_file.close()
