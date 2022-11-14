@@ -12,8 +12,9 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-b', '--baseline', action="store_true", help='Baseline normalization average', default=1)
-parser.add_argument('-ema', '--exponential_moving_average', store="store_true", help='exponential moving average', default=20)
+parser.add_argument('-ema', '--exponential_moving_average', action="store_true", help='exponential moving average', default=20)
 parser.add_argument('-tt', '--time_to_ticks', action="store_true", help='Process timestamps in ticks or human readable', default=False)
+parser.add_argument('-f', '--fix-dates', action="store_true", help='resample the dates in the model file', default=True)
 
 
 args = parser.parse_args()
@@ -23,14 +24,16 @@ timeframes = ['15MINUTE', '30MINUTE', '1HOUR', '4HOUR', '1DAY']
 AL = args.exponential_moving_average
 BL = args.baseline
 TT = args.time_to_ticks
+F = args.fix_dates
 
 for arg in [AL, BL]:
     if not isinstance(arg, int):
         raise TypeError
-if not isinstance(TT, bool):
-    raise TypeError
-if BL < AL:
-    print('baseline cannot be less than moving average')
+for arg in [TT, F]:
+    if not isinstance(arg, bool):
+        raise TypeError
+if BL > AL:
+    print('average cannot be less than the baseline')
     raise ValueError
 
 here = Path(os.path.abspath(os.path.join(os.path.dirname(__file__))))
@@ -65,14 +68,17 @@ def open_file(filename: str, as_list: bool = False):
         return file.read()
 
 
-def string_to_ticks(timestamp: str) -> int:
+def string_to_ticks(timestamp: str) -> [int, str]:
     """
     This will convert our timestamps into standard ticks format.
     """
-    _d = datetime.datetime.strptime(timestamp, "%Y-%m-%d-%H-%M")
-    t0 = datetime.datetime(1970, 1, 1)
-    ticks = (_d - t0).total_seconds()
-    return int(ticks)
+    if TT:
+        _d = datetime.datetime.strptime(timestamp, "%Y-%m-%d-%H-%M")
+        t0 = datetime.datetime(1970, 1, 1)
+        ticks = (_d - t0).total_seconds()
+        return int(ticks)
+    else:
+        return timestamp
 
 
 def translate_fields(fields: [dict, list]) -> tuple:
@@ -137,6 +143,39 @@ def normalize_quotes(_quotes: list, average_length: int, average_base: int):
     return result
 
 
+def fix_timestamps(data: dict) -> dict:
+    """
+    This will ensure that any missing timestamps are filled in.
+    """
+    def _no_z(a, b):
+        """
+        Prevent division by zero.
+        """
+        if not b:
+            return 0
+        else:
+            return int(a / b)
+
+    _timeframes = list()
+    for tf in timeframes:
+        _timeframes.append(data[tf])
+    base, m30, h1, h4, d1 = _timeframes
+    for ix, sample in enumerate(base):
+        st = sample['stamp']
+        if ix % 2:
+            m30[_no_z(ix, 2)]['stamp'] = st
+        if ix % 4:
+            h1[_no_z(ix, 4)]['stamp'] = st
+        if ix % 16:
+            h4[_no_z(ix, 16)]['stamp'] = st
+        if ix % 96:
+            d1[_no_z(ix, 96)]['stamp'] = st
+    _timeframes = [base, m30, h1, h4, d1]
+    for tf, _tf in zip(timeframes, _timeframes):
+        data[tf] = _tf
+    return data
+
+
 for idx, m_file in enumerate(model_files):
     target = Path('charts/aaa_floating.dat')
     prefix = Path(m_file)  # noqa
@@ -147,6 +186,8 @@ pass  # debug hook
 
 for idx, m_file in enumerate(model_files):
     raw_data = open_file(m_file.as_posix(), as_list=True)[0]  # noqa
+    if F:
+        raw_data = fix_timestamps(raw_data)
     for timeframe in timeframes:
         frame_data = raw_data[timeframe]
         output_name = f'output/{output_files[idx]}_{timeframe}_{ext}'
