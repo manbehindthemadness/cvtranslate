@@ -23,4 +23,5 @@ For additional information and experimentation it can be accessed using the foll
 * Join `https://discord.gg/Sy6RKHqE`
 * Private message `MagicFeed Beta #5726`
 * Activate using the public researcher promo code: `412186895428711041`
+* * If you feel this is useful and want to toss some litecoin at me for server costs, that's cool as well ;)
 * See the integrated bot help for further instructions.
